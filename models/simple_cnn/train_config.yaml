@@ -1,0 +1,11 @@
+optimizer:
+  name: "sgd"
+  params:
+    lr: 0.01
+    momentum: 0.9
+
+loss_fn: "ce_loss"
+batch_size: 128
+epochs: 20
+
+device: "cuda"
