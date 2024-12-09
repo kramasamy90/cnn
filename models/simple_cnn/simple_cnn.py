@@ -17,7 +17,6 @@ class SimpleCnn(nn.Module):
 
         # Define layers.
         self.act = nn.ReLU6()
-        self.out_act = nn.Softmax()
         self.pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
         self.conv1 = nn.Conv2d(
@@ -53,6 +52,4 @@ class SimpleCnn(nn.Module):
 
         x = torch.flatten(x, 1)
         x = self.fc1(x)
-        x = self.act(x)
-        x = self.out_act(x)
         return x
