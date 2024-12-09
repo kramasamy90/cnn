@@ -25,4 +25,4 @@ if __name__ == '__main__':
     # Load model.
     model = SimpleCnn()
     trainer = Trainer(model, train_dataset, config)
-    trainer.train()
+    result = trainer.train()

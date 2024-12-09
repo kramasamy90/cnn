@@ -40,6 +40,7 @@ class Trainer:
         train_loader = DataLoader(self.train_dataset,
                                     batch_size=self.config['batch_size'], shuffle=True)
         self.model.train()
+        loss_history = []
         for epoch in range(self.config['epochs']):
             running_loss = 0.0
             for images, labels in tqdm(train_loader):
@@ -55,4 +56,6 @@ class Trainer:
 
             print(f"Epoch {epoch+1}/{self.config['epochs']},\
                    Loss: {running_loss/len(train_loader)}")
+            loss_history.append(running_loss)
+        return {"model": self.model, "loss_history" : loss_history}
 
