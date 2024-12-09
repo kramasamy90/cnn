@@ -1,0 +1,9 @@
+optimizer:
+  name: "sgd"
+  lr: 0.01
+
+epochs: 20
+
+loss_fn: "bce"
+epochs: 5
+batch_size: 64
