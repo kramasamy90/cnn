@@ -27,7 +27,8 @@ class Trainer:
         self.train_dataset = train_dataset
 
     
-    def train(self):
+    def train(self, inner_progress_bar = False, outer_progress_bar = True, 
+              print_loss = False):
         self.model.to(self.config['device'])
 
         # Get optimizer.
@@ -39,11 +40,18 @@ class Trainer:
 
         train_loader = DataLoader(self.train_dataset,
                                     batch_size=self.config['batch_size'], shuffle=True)
+        if inner_progress_bar:
+            train_loader = tqdm(train_loader)
+        if outer_progress_bar:
+            epochs_iterator = tqdm(range(self.config['epochs']))
+        else:
+            epochs_iterator = range(self.config['epochs'])
+
         self.model.train()
         loss_history = []
-        for epoch in range(self.config['epochs']):
+        for epoch in epochs_iterator:
             running_loss = 0.0
-            for images, labels in tqdm(train_loader):
+            for images, labels in train_loader:
                 images = images.to(self.config['device'])
                 labels = labels.to(self.config['device'])
                 optimizer.zero_grad()
@@ -53,9 +61,10 @@ class Trainer:
                 optimizer.step()
 
                 running_loss += loss.item()
+            if print_loss:
+                print(f"Epoch {epoch+1}/{self.config['epochs']},\
+                    Loss: {running_loss/len(train_loader)}")
 
-            print(f"Epoch {epoch+1}/{self.config['epochs']},\
-                   Loss: {running_loss/len(train_loader)}")
-            loss_history.append(running_loss)
+            loss_history.append(running_loss / len(train_loader))
         return {"model": self.model, "loss_history" : loss_history}
 
