@@ -3,11 +3,24 @@ import sys
 
 from tqdm import tqdm
 
+import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from optimizer_factory import OptimizerFactory
+class OptimizerFactory:
+    optimizers = {
+        'sgd'       : torch.optim.SGD,
+        'adam'      : torch.optim.Adam,
+        'rmsprop'   : torch.optim.RMSprop
+    }
+
+    def __init__(self, optimizer_config: dict):
+        self.optimizer_name = optimizer_config['name']
+        self.optimizers_params = optimizer_config['params']
+    
+    def get_optimizer(self, model_weights):
+        return self.optimizers[self.optimizer_name](model_weights,
+                                                    **self.optimizers_params)
 
 
 class Trainer:

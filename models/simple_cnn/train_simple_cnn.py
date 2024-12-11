@@ -8,7 +8,7 @@ from simple_cnn import SimpleCnn
 sys.path.append(os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..', '..', 'utils')))
 print(sys.path)
-from trainer import Trainer
+from train_utils import Trainer
 
 
 if __name__ == '__main__':
