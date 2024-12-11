@@ -6,6 +6,6 @@ optimizer:
 
 loss_fn: "ce_loss"
 batch_size: 128
-epochs: 20
+epochs: 10
 
 device: "cuda"
