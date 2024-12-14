@@ -8,9 +8,11 @@ def get_top_k_accuracy(y_pred, y_true, k=5):
     return top_k_accuracy
 
 def evaluate_model(model, dataloader, device='cuda'):
-    model.eval()
     y_pred_list = []
     y_true_list = []
+
+    model.to(device)
+    model.eval()
 
     with torch.no_grad():
         for inputs, labels in dataloader:
