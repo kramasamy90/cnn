@@ -4,22 +4,21 @@ def find_suffix(s, t):
     return t[len(s)+1:]
 
 
-def get_config(params):
-    raw_config = params
-    name = params['optimizer']['name']
+def get_config(config):
+    name = config['optimizer']['name']
     if name == 'adam':
-        beta1 = raw_config['optimizer']['adam_beta1']
-        beta2 = raw_config['optimizer']['adam_beta2']
-        del raw_config['optimizer']['beta1']
-        del raw_config['optimizer']['beta2']
-        raw_config['optimize']['betas'] = (beta1, beta2)
-    raw_config['device'] = 'cpu'
+        beta1 = config['optimizer']['params']['beta1']
+        beta2 = config['optimizer']['params']['beta2']
+        del config['optimizer']['params']['beta1']
+        del config['optimizer']['params']['beta2']
+        config['optimizer']['params']['betas'] = (beta1, beta2)
+    # config['device'] = 'cpu'
 
-    config = {}
+    # config = {}
 
-    for key, value in raw_config.items():
-        new_key = find_suffix(name, key)
-        config[new_key] = value
+    # for key, value in raw_config.items():
+    #     new_key = find_suffix(name, key)
+    #     config[new_key] = value
 
     return config
 
