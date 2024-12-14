@@ -25,19 +25,13 @@ class ISBIEMDataset(Dataset):
     def __getitem__(self, index):
 
         image = self.images[index] / 255.0
-        label = self.labels[index] / 255.0
+        image = image.astype(np.float32)
+        label = self.labels[index] / 255
 
+        image = self.transform(image)
+        label = torch.from_numpy(label)
+        label = label.long()
 
-        if self.transform:
-            image = self.transform(image)
-
-        if not isinstance(image, torch.Tensor):
-            image = torch.from_numpy(image).unsqueeze(0)
-        label = torch.from_numpy(label).unsqueeze(0)
-
-        if label.shape != image.shape:
-            image = image.unsqueeze(0)
-        
         return image, label
     
     @staticmethod
