@@ -1,6 +1,7 @@
 import os
 import sys
 
+from copy import deepcopy
 from tqdm import tqdm
 
 import torch
@@ -38,25 +39,29 @@ class Trainer:
 
     
     def train(self,
-              inner_progress_bar = False,
-              outer_progress_bar = True, 
+              loss_fn = None,
+              progress_bar = True, 
               print_loss = False,
               return_intermediate_models = False):
-        self.model.to(self.config['device'])
+
+        device = self.config.get('device', 'cpu')
+        self.model.to(device)
 
         # Get optimizer.
         optimizer_factory = OptimizerFactory(self.config['optimizer'])
         optimizer = optimizer_factory.get_optimizer(self.model.parameters())
 
         # Loss function.
-        criterion = self.loss_fns[self.config['loss_fn']]().to(self.config['device'])
+        if loss_fn is not None:
+            criterion = loss_fn
+        else:
+            criterion = self.loss_fns[self.config['loss_fn']]().\
+                                                    to(self.config['device'])
         # Dataset.
         train_loader = DataLoader(self.train_dataset,
-                                    batch_size=self.config['batch_size'], shuffle=True)
+                        batch_size=self.config['batch_size'], shuffle=True)
         
-        if inner_progress_bar:
-            train_loader = tqdm(train_loader)
-        if outer_progress_bar:
+        if progress_bar:
             epochs_iterator = tqdm(range(self.config['epochs']))
         else:
             epochs_iterator = range(self.config['epochs'])
@@ -65,14 +70,17 @@ class Trainer:
             intermediate_models = []
         
         output = {}
+        best_model = self.model
+        best_epoch = 0
+        min_loss = torch.inf
+        loss_history = []
 
         self.model.train()
-        loss_history = []
         for epoch in epochs_iterator:
             running_loss = 0.0
             for images, labels in train_loader:
-                images = images.to(self.config['device'])
-                labels = labels.to(self.config['device'])
+                images = images.to(device)
+                labels = labels.to(device)
                 optimizer.zero_grad()
                 outputs = self.model(images)
                 loss = criterion(outputs, labels)
@@ -80,6 +88,12 @@ class Trainer:
                 optimizer.step()
 
                 running_loss += loss.item()
+            
+            if running_loss < min_loss:
+                min_loss = running_loss
+                best_epoch = epoch
+                best_model = deepcopy(self.model)
+
             if print_loss:
                 print(f"Epoch {epoch+1}/{self.config['epochs']},\
                     Loss: {running_loss/len(train_loader)}")
@@ -89,7 +103,8 @@ class Trainer:
             loss_history.append(running_loss / len(train_loader))
 
         output = {
-            'model' : self.model,
+            'model' : best_model,
+            'best_epoch' : best_epoch,
             'loss_history' : loss_history,
         }
 
