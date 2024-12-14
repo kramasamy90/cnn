@@ -7,7 +7,10 @@ search_space = {
             'params' : {
                 'lr': hp.uniform('sgd_lr', 0.001, 0.1),
                 'weight_decay': hp.uniform('sgd_weight_decay', 1e-5, 1e-2),
-                'momentum' : hp.uniform('sgd_momentum', 0.001, 0.01)
+                'momentum' : hp.choice('sgd_momentum_choice', [
+                    0,
+                    hp.uniform('sgd_momentum', 0.8, 0.99)
+                ]),
             }
         },
         {
@@ -24,7 +27,10 @@ search_space = {
             'params' : {
                 'lr': hp.uniform('rmsprop_lr', 0.001, 0.1),
                 'weight_decay': hp.uniform('rmsprop_weight_decay', 1e-5, 1e-2),
-                'momentum' : hp.uniform('rmsprop_momentum', 0.001, 0.01),
+                'momentum' : hp.choice('rmsprop_momentum_choice', [
+                    0,
+                    hp.uniform('rmsprop_momentum', 0.8, 0.99)
+                ]),
                 'alpha' : hp.uniform('rmsprop_alpha', 0.9, 0.99)
             }
         }
