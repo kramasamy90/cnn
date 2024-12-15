@@ -40,11 +40,11 @@ class ISBIEMDataset(Dataset):
         timage = image
         fimage = cv2.flip(image, 1)
         transformed_images.append(fimage)
-        for i in range(3):
-            timage = cv2.rotate(timage, cv2.ROTATE_90_CLOCKWISE)
-            fimage = cv2.rotate(timage, cv2.ROTATE_90_CLOCKWISE)
-            transformed_images.append(timage)
-            transformed_images.append(fimage)
+        # for i in range(3):
+        #     timage = cv2.rotate(timage, cv2.ROTATE_90_CLOCKWISE)
+        #     fimage = cv2.rotate(timage, cv2.ROTATE_90_CLOCKWISE)
+        #     transformed_images.append(timage)
+        #     transformed_images.append(fimage)
         return transformed_images
 
     
@@ -67,7 +67,7 @@ class ISBIEMDataset(Dataset):
             transformed_labels.extend(self._rotate_flip(label))
 
         transformed_images = np.array(transformed_images)
-        transformed_label = np.array(transformed_labels)
+        transformed_labels = np.array(transformed_labels)
 
         self.images = np.concatenate((images, transformed_images), 0)
         self.labels = np.concatenate((labels, transformed_labels), 0)
@@ -80,13 +80,13 @@ class ISBIEMDataset(Dataset):
         ])
 
         for i in range(len(self.images)):
-            for j in range(5):
+            for j in range(1):
                 transformed = transform(image = self.images[i],
                                         mask=self.labels[i])
                 deformed_images.append(transformed['image'])
                 deformed_labels.append(transformed['mask'])
         deformed_images = np.array(deformed_images)
-        deformed_label = np.array(deformed_labels)
+        deformed_labels = np.array(deformed_labels)
 
         self.images = np.concatenate((self.images, deformed_images), 0)
         self.labels = np.concatenate((self.labels, deformed_labels), 0)
