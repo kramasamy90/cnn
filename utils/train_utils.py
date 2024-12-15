@@ -52,6 +52,19 @@ class OptimizerFactory:
         return self.optimizers[self.optimizer_name](model_weights,
                                                     **self.optimizers_params)
 
+class SchedulerFactory:
+    schedulers = {
+        'multisteplr': torch.optim.lr_scheduler.MultiStepLR
+    }
+
+    def __init__(self, scheduler_config):
+        self.scheduler_name = scheduler_config['name']
+        self.scheduler_params = scheduler_config['params']
+    
+
+    def get_scheduler(self, optimizer):
+        return self.schedulers[self.scheduler_name](optimizer,
+                                                    **self.scheduler_params)
 
 class Trainer:
     loss_fns = {
@@ -81,6 +94,10 @@ class Trainer:
         # Get optimizer.
         optimizer_factory = OptimizerFactory(self.config['optimizer'])
         optimizer = optimizer_factory.get_optimizer(self.model.parameters())
+
+        if self.config.get('scheduler') is not None:
+            scheduler_factory = SchedulerFactory(self.config['scheduler'])
+            scheduler = scheduler_factory.get_scheduler(optimizer)
 
         # Loss function.
         if loss_fn is not None:
@@ -123,6 +140,10 @@ class Trainer:
 
                 running_loss += loss.item()
             
+
+            if self.config.get('scheduler') is not None:
+                scheduler.step()
+
             if running_loss < min_loss:
                 min_loss = running_loss
                 best_epoch = epoch
