@@ -1,24 +1,23 @@
 import os
 import sys
-
+import yaml
 from copy import deepcopy
 from tqdm import tqdm
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-
+from torch.utils.tensorboard import SummaryWriter
 
 ## Utility functions for monitoring.
 def get_grad_norm(model):
     total_norm = 0.0
     for p in model.parameters():
         if p.grad is not None:
-            param_norm = p.grad.data.norm(2)  # Compute L2 norm
+            param_norm = p.grad.data.norm(2)
             total_norm += param_norm.item() ** 2
-    total_norm = total_norm ** 0.5  # Final L2 norm for the entire model
+    total_norm = total_norm ** 0.5
     return total_norm
-
 
 ## Initialization
 def he_init(module):
@@ -28,14 +27,11 @@ def he_init(module):
         if module.bias is not None:
             nn.init.constant_(module.bias, 0)
 
-
 def xavier_init(module):
     if isinstance(module, nn.Linear) or isinstance(module, nn.Conv2d):
-        nn.init.xavier_normal_(module.weight, mode='fan_in',
-                                 nonlinearity='relu')
+        nn.init.xavier_normal_(module.weight)
         if module.bias is not None:
             nn.init.constant_(module.bias, 0)
-
 
 class OptimizerFactory:
     optimizers = {
@@ -61,7 +57,6 @@ class SchedulerFactory:
         self.scheduler_name = scheduler_config['name']
         self.scheduler_params = scheduler_config['params']
     
-
     def get_scheduler(self, optimizer):
         return self.schedulers[self.scheduler_name](optimizer,
                                                     **self.scheduler_params)
@@ -73,25 +68,29 @@ class Trainer:
         'ce_loss'    : nn.CrossEntropyLoss
     }
 
-
     def __init__(self, model, train_dataset, config):
+        if isinstance(config, str):
+            with open(config, 'r') as file:
+                config = yaml.safe_load(file)
         self.config = config
         self.model = model
         self.train_dataset = train_dataset
 
-    
+        log_dir = config.get('log_dir')
+        self.writer = SummaryWriter(log_dir=log_dir) if log_dir else None
+
+        if self.writer:
+            config_yaml = yaml.dump(self.config)
+            self.writer.add_text('Config', f"\n{config_yaml}")
+
     def train(self,
               loss_fn = None,
-              progress_bar = True, 
-              inner_progress_bar = False, 
+              progress_bar = True,
               print_loss = False,
-              print_grad_norm = False,
               return_intermediate_models = False):
-
         device = self.config.get('device', 'cpu')
         self.model.to(device)
 
-        # Get optimizer.
         optimizer_factory = OptimizerFactory(self.config['optimizer'])
         optimizer = optimizer_factory.get_optimizer(self.model.parameters())
 
@@ -99,18 +98,14 @@ class Trainer:
             scheduler_factory = SchedulerFactory(self.config['scheduler'])
             scheduler = scheduler_factory.get_scheduler(optimizer)
 
-        # Loss function.
         if loss_fn is not None:
             criterion = loss_fn
         else:
             criterion = self.loss_fns[self.config['loss_fn']]().\
                                                     to(self.config['device'])
-        # Dataset.
+
         train_loader = DataLoader(self.train_dataset,
                         batch_size=self.config['batch_size'], shuffle=True)
-        
-        if inner_progress_bar:
-            train_loader = tqdm(train_loader)
         
         if progress_bar:
             epochs_iterator = tqdm(range(self.config['epochs']))
@@ -137,33 +132,44 @@ class Trainer:
                 outputs = self.model(images)
                 loss = criterion(outputs, labels)
                 loss.backward()
-                # TODO: Accumulate the norm of gradient here.
-                if print_grad_norm:
-                    running_grad_norm += get_grad_norm(self.model)
+
+                grad_norm = get_grad_norm(self.model)
+                running_grad_norm += grad_norm
+
                 optimizer.step()
 
                 running_loss += loss.item()
-            
+                
+                if self.writer:
+                    for name, param in self.model.named_parameters():
+                        if param.grad is not None:
+                            self.writer.add_histogram(f'Gradients/{name}', param.grad, epoch)
 
             if self.config.get('scheduler') is not None:
                 scheduler.step()
 
-            if running_loss < min_loss:
-                min_loss = running_loss
+            epoch_loss = running_loss / len(train_loader)
+            epoch_grad_norm = running_grad_norm / len(train_loader)
+
+            if epoch_loss < min_loss:
+                min_loss = epoch_loss
                 best_epoch = epoch
                 best_model = deepcopy(self.model)
             
-            if print_grad_norm:
-                print(f"Epoch {epoch+1}/{self.config['epochs']},\
-                    Gradient norm: {running_grad_norm / len(train_loader)}")
-
             if print_loss:
-                print(f"Epoch {epoch+1}/{self.config['epochs']},\
-                    Loss: {running_loss/len(train_loader)}")
+                print(f"Epoch {epoch+1}/{self.config['epochs']}, Loss: {epoch_loss}")
+
             if return_intermediate_models:
                 intermediate_models.append(self.model)
 
-            loss_history.append(running_loss / len(train_loader))
+            loss_history.append(epoch_loss)
+
+            if self.writer:
+                self.writer.add_scalar('Loss/train', epoch_loss, epoch)
+                self.writer.add_scalar('Gradient_Norm/global', epoch_grad_norm, epoch)
+
+                for name, param in self.model.named_parameters():
+                    self.writer.add_histogram(f'Weights/{name}', param, epoch)
 
         output = {
             'model' : best_model,
@@ -173,6 +179,8 @@ class Trainer:
 
         if return_intermediate_models:
             output['intermediate_models'] = intermediate_models
-    
-        return output
 
+        if self.writer:
+            self.writer.close()
+        
+        return output
