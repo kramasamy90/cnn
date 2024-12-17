@@ -13,14 +13,15 @@ from torch.utils.tensorboard import SummaryWriter
 # Various utility functions.
 def compute_class_weights(dataset, num_classes):
     """
-    Compute class weights for a dataset based on class frequency.
+    Compute class weights for predicted_class = torch.argmax(probs, dim=1)a dataset based on class frequency.
     Args:
         dataset: A PyTorch Dataset object where labels are returned.
         num_classes: Number of classes in the dataset.
     Returns:
         Tensor containing weights for each class.
     """
-
+    # TODO: Make it more general. 
+    # Currently applicable only to segmetnation masks.
     if num_classes is None:
         raise ValueError("num_classes cannot be None.")
 
@@ -28,7 +29,10 @@ def compute_class_weights(dataset, num_classes):
     class_counts = torch.zeros(num_classes) + 0.1 # To avoid divide-by-zero.
     
     for _, label in dataset:
-        class_counts[label] += 1
+        x, y = label.shape
+        p = label.sum() / (x * y)
+        class_counts[0] += 1 - p
+        class_counts[1] += p
     
     total_samples = class_counts.sum()
     weights = total_samples / class_counts
