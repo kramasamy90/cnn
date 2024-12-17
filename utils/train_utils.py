@@ -146,7 +146,9 @@ class Trainer:
         
 
     def train(self,
+              optimizer = None,
               progress_bar = True,
+              inner_progress_bar = False,
               print_loss = False,
               return_intermediate_models = False):
 
@@ -156,8 +158,9 @@ class Trainer:
 
         
         # Get Optimizer.
-        optimizer_factory = OptimizerFactory(self.config['optimizer'])
-        optimizer = optimizer_factory.get_optimizer(self.model.parameters())
+        if optimizer is None:
+            optimizer_factory = OptimizerFactory(self.config['optimizer'])
+            optimizer = optimizer_factory.get_optimizer(self.model.parameters())
 
         # Get Scheduler.
         if self.config.get('scheduler') is not None:
@@ -185,8 +188,10 @@ class Trainer:
         criterion = criterion.to(self.config['device'])
 
         # Data setup.
-        train_loader = DataLoader(self.train_dataset,
+        train_loader = DataLoader(self.train_dataset, num_workers=4,
                         batch_size=self.config['batch_size'], shuffle=True)
+        if inner_progress_bar:
+            train_loader = tqdm(train_loader)
 
         # Logging settings.
         if progress_bar:
