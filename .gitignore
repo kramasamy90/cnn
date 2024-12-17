@@ -7,6 +7,9 @@ __pycache__/
 data/
 runs/
 
+# Editor related.
+.vscode/
+
 
 # Temporary files.
 foo.ipynb
