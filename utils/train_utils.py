@@ -129,6 +129,7 @@ class Trainer:
         self.model.train()
         for epoch in epochs_iterator:
             running_loss = 0.0
+            running_grad_norm = 0.0
             for images, labels in train_loader:
                 images = images.to(device)
                 labels = labels.to(device)
@@ -136,6 +137,9 @@ class Trainer:
                 outputs = self.model(images)
                 loss = criterion(outputs, labels)
                 loss.backward()
+                # TODO: Accumulate the norm of gradient here.
+                if print_grad_norm:
+                    running_grad_norm += get_grad_norm(self.model)
                 optimizer.step()
 
                 running_loss += loss.item()
@@ -150,9 +154,8 @@ class Trainer:
                 best_model = deepcopy(self.model)
             
             if print_grad_norm:
-                grad_norm = get_grad_norm(self.model)
                 print(f"Epoch {epoch+1}/{self.config['epochs']},\
-                    Gradient norm: {grad_norm}")
+                    Gradient norm: {running_grad_norm / len(train_loader)}")
 
             if print_loss:
                 print(f"Epoch {epoch+1}/{self.config['epochs']},\
