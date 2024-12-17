@@ -9,6 +9,37 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
+
+# Various utility functions.
+def compute_class_weights(dataset, num_classes):
+    """
+    Compute class weights for a dataset based on class frequency.
+    Args:
+        dataset: A PyTorch Dataset object where labels are returned.
+        num_classes: Number of classes in the dataset.
+    Returns:
+        Tensor containing weights for each class.
+    """
+
+    if num_classes is None:
+        raise ValueError("num_classes cannot be None.")
+
+    # TODO: Remove 0.1 and raise error if num_classes is 0 for some class??
+    class_counts = torch.zeros(num_classes) + 0.1 # To avoid divide-by-zero.
+    
+    for _, label in dataset:
+        class_counts[label] += 1
+    
+    total_samples = class_counts.sum()
+    weights = total_samples / class_counts
+    weights = weights / weights.sum()
+
+    # TODO: Remove this.
+    print(weights)
+
+    return weights
+
+
 ## Utility functions for monitoring.
 def get_grad_norm(model):
     total_norm = 0.0
@@ -19,7 +50,8 @@ def get_grad_norm(model):
     total_norm = total_norm ** 0.5
     return total_norm
 
-## Initialization
+
+## Utility functions for initialization.
 def he_init(module):
     if isinstance(module, nn.Linear) or isinstance(module, nn.Conv2d):
         nn.init.kaiming_normal_(module.weight, mode='fan_in',
@@ -33,6 +65,8 @@ def xavier_init(module):
         if module.bias is not None:
             nn.init.constant_(module.bias, 0)
 
+
+# Factory classes for creating functions.
 class OptimizerFactory:
     optimizers = {
         'sgd'       : torch.optim.SGD,
@@ -50,7 +84,7 @@ class OptimizerFactory:
 
 class SchedulerFactory:
     schedulers = {
-        'multisteplr': torch.optim.lr_scheduler.MultiStepLR
+        'multi_step_lr': torch.optim.lr_scheduler.MultiStepLR
     }
 
     def __init__(self, scheduler_config):
@@ -60,6 +94,29 @@ class SchedulerFactory:
     def get_scheduler(self, optimizer):
         return self.schedulers[self.scheduler_name](optimizer,
                                                     **self.scheduler_params)
+
+
+# class LossFnFactory:
+#     loss_fns = {
+#         'ce_loss': torch.nn.CrossEntropyLoss,
+#         'bce_loss': torch.nn.BCELoss,
+#         'mse_loss': torch.nn.MSELoss
+#     }
+
+#     def __init__(self, loss_fn_config):
+#         self.loss_fn_name = loss_fn_config['name']
+#         self.num_classes = loss_fn_config.get('num_classes')
+#         self.do_weighted_loss = loss_fn_config.get('do_weighted_loss')
+#         if self.do_weighted_loss is None:
+#             self.do_weighted_loss = False
+#             self.weights = loss_fn_config['weights']
+    
+#     def __get_loss_fn__(self):
+#         if self.do_weighted_loss:
+#             if isinstance(self.weights, str):
+#                 if self.weights == "auto"
+#                 self.weights =
+
 
 class Trainer:
     loss_fns = {
@@ -82,31 +139,52 @@ class Trainer:
         if self.writer:
             config_yaml = yaml.dump(self.config)
             self.writer.add_text('Config', f"\n{config_yaml}")
+        
 
     def train(self,
-              loss_fn = None,
               progress_bar = True,
               print_loss = False,
               return_intermediate_models = False):
+
+        # Get general parameters.
         device = self.config.get('device', 'cpu')
         self.model.to(device)
 
+        
+        # Get Optimizer.
         optimizer_factory = OptimizerFactory(self.config['optimizer'])
         optimizer = optimizer_factory.get_optimizer(self.model.parameters())
 
+        # Get Scheduler.
         if self.config.get('scheduler') is not None:
             scheduler_factory = SchedulerFactory(self.config['scheduler'])
             scheduler = scheduler_factory.get_scheduler(optimizer)
 
-        if loss_fn is not None:
-            criterion = loss_fn
-        else:
-            criterion = self.loss_fns[self.config['loss_fn']]().\
-                                                    to(self.config['device'])
+        # Get loss function.
+        criterion = self.loss_fns[self.config['loss_fn']['name']]
+        weights = self.config['loss_fn'].get('weights')
+        if weights is not None:
+            if isinstance(weights, str):
+                if (weights == "auto"):
+                    weights = compute_class_weights(self.train_dataset,
+                                            self.config['loss_fn']['num_classes'])
+            
+            else:
+                weights = torch.tensor(weights)
 
+            criterion = criterion(weights)
+            # TODO: Remove.
+            print("Get loss fn with weighted loss.")
+        else:
+            criterion = criterion()
+
+        criterion = criterion.to(self.config['device'])
+
+        # Data setup.
         train_loader = DataLoader(self.train_dataset,
                         batch_size=self.config['batch_size'], shuffle=True)
-        
+
+        # Logging settings.
         if progress_bar:
             epochs_iterator = tqdm(range(self.config['epochs']))
         else:
@@ -115,12 +193,15 @@ class Trainer:
         if return_intermediate_models:
             intermediate_models = []
         
+
+        # Initialize output variables.
         output = {}
         best_model = self.model
         best_epoch = 0
         min_loss = torch.inf
         loss_history = []
 
+        # Train
         self.model.train()
         for epoch in epochs_iterator:
             running_loss = 0.0
