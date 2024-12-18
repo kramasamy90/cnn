@@ -11,6 +11,23 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 # Various utility functions.
+
+def get_distribution(dataloader):
+    mean, var, total_pixels = 0, 0, 0
+
+    for images, _ in dataloader:
+        images = images.view(images.size(0), -1)
+        total_pixels += images.numel()
+        mean += images.sum()
+        var += (images ** 2).sum()
+
+    mean = mean / total_pixels
+    var = (var / total_pixels) - (mean ** 2)
+
+    return mean, torch.sqrt(var) 
+
+
+
 def compute_class_weights(dataset, num_classes):
     """
     Compute class weights for predicted_class = torch.argmax(probs, dim=1)a dataset based on class frequency.
