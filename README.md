@@ -1,6 +1,7 @@
 # My Implementation of Various Neural Networks
 
-This repository is dedicated to exploring and understanding various artificial neural networks.
+This is my repository explore and understand various artificial neural networks.
+
 
 ## Implementations
 
@@ -12,5 +13,3 @@ Various utility tools including a `Trainer` class to make training easy. [View D
 
 - **U-Net**: An implementation of the U-Net architecture, commonly used for image segmentation tasks.  
   [View Directory](https://github.com/kramasamy90/neural-networks/tree/master/models/unet)
-
-Feel free to explore and contribute!
