@@ -7,6 +7,16 @@ def get_top_k_accuracy(y_pred, y_true, k=5):
     top_k_accuracy = correct.float().mean().item() * 100
     return top_k_accuracy
 
+
+def get_pixel_accuracy(y_pred, y_true):
+    pred_classes = torch.argmax(y_pred, dim=1)
+    correct_pixels = (pred_classes == y_true).float()
+    correct_pixels_count = correct_pixels.sum()
+    total_pixels = correct_pixels.numel()
+    accuracy = (correct_pixels_count / total_pixels) * 100
+    return accuracy.item()
+
+
 def evaluate_model(model, dataloader, device='cuda'):
     y_pred_list = []
     y_true_list = []
@@ -25,3 +35,5 @@ def evaluate_model(model, dataloader, device='cuda'):
     y_true = torch.cat(y_true_list, dim=0)
 
     return y_pred, y_true
+
+

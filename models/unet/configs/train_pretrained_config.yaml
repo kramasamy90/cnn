@@ -1,0 +1,25 @@
+optimizer:
+  name: "sgd"
+  params:
+    lr: 0.00065
+    weight_decay: 0.007
+    momentum: 0.9
+  lr_damp_pretrained: 0.13
+
+scheduler:
+  name: "multi_step_lr"
+  params:
+    milestones: [7, 10, 15]
+    gamma: 0.5
+
+loss_fn: 
+  name: "ce_loss"
+  num_classes: 2
+  weights: "auto"
+
+batch_size: 2
+epochs: 20
+
+device: "cuda"
+
+log_dir: "/home/kramasamy/Code/projects/cnn/models/unet/runs/"
