@@ -7,7 +7,8 @@ __pycache__/
 data/
 runs/
 **.pkl
-logs/
+models/unet/logs/**
+!models/unet/logs/**.jpg
 
 # Editor related.
 .vscode/
