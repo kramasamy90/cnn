@@ -1,15 +1,15 @@
 optimizer:
-  name: "adam"
+  name: "sgd"
   params:
-    lr: 0.0005
-    weight_decay: 0.008
-    betas: [0.91, 0.998]
-  lr_damp_pretrained: 0.1
+    lr: 0.00065
+    weight_decay: 0.007
+    momentum: 0.9
+  lr_damp_pretrained: 0.13
 
 scheduler:
   name: "multi_step_lr"
   params:
-    milestones: [4, 8, 12, 16]
+    milestones: [7, 10, 15]
     gamma: 0.5
 
 loss_fn: 
